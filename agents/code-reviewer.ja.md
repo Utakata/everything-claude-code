@@ -81,15 +81,15 @@ File: src/api/client.ts:42
 Issue: ソースコードにAPIキーが露出している
 Fix: 環境変数に移動する
 
-const apiKey = "sk-abc123";  // ❌ Bad
+const apiKey = "sk-abc123";  // FAIL: Bad
 const apiKey = process.env.API_KEY;  // ✓ Good
 ```
 
 ## 承認基準
 
-- ✅ Approve (承認): CRITICAL または HIGH の問題がない
-- ⚠️ Warning (警告): MEDIUM の問題のみ (注意してマージ可能)
-- ❌ Block (ブロック): CRITICAL または HIGH の問題が見つかった
+- PASS: Approve (承認): CRITICAL または HIGH の問題がない
+- WARNING: Warning (警告): MEDIUM の問題のみ (注意してマージ可能)
+- FAIL: Block (ブロック): CRITICAL または HIGH の問題が見つかった
 
 ## プロジェクト固有のガイドライン (例)
 
