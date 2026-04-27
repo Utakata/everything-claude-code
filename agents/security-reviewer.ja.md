@@ -92,13 +92,13 @@ eslint . --plugin security
 
 ### 1. 安全でない直接オブジェクト参照 (IDOR)
 ```typescript
-// ❌ VULNERABLE: No ownership check
+// FAIL: VULNERABLE: No ownership check
 app.get('/api/orders/:id', (req, res) => {
   const order = db.getOrder(req.params.id)
   res.json(order)
 })
 
-// ✅ SECURE: Verify ownership
+// PASS: SECURE: Verify ownership
 app.get('/api/orders/:id', (req, res) => {
   const order = db.getOrder(req.params.id)
   if (order.user_id !== req.user.id) {
@@ -110,23 +110,23 @@ app.get('/api/orders/:id', (req, res) => {
 
 ### 2. クロスサイトスクリプティング (XSS)
 ```typescript
-// ❌ VULNERABLE: dangerouslySetInnerHTML in React
+// FAIL: VULNERABLE: dangerouslySetInnerHTML in React
 <div dangerouslySetInnerHTML={{ __html: userComment }} />
 
-// ✅ SECURE: Use default React escaping
+// PASS: SECURE: Use default React escaping
 <div>{userComment}</div>
 
-// ✅ SECURE: Sanitize if necessary
+// PASS: SECURE: Sanitize if necessary
 import DOMPurify from 'dompurify'
 <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(userComment) }} />
 ```
 
 ### 3. ハードコードされた秘密情報
 ```typescript
-// ❌ VULNERABLE: API key in code
+// FAIL: VULNERABLE: API key in code
 const STRIPE_KEY = "sk_live_123456789";
 
-// ✅ SECURE: Environment variable
+// PASS: SECURE: Environment variable
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
 ```
 
@@ -219,13 +219,13 @@ CRITICALな脆弱性を見つけた場合：
 ## 成功基準
 
 セキュリティレビュー後：
-- ✅ CRITICALな問題が見つからない
-- ✅ すべてのHIGH問題が対処されている
-- ✅ セキュリティチェックリストが完了している
-- ✅ コード内に秘密情報がない
-- ✅ 依存関係が最新である
-- ✅ テストにセキュリティシナリオが含まれている
-- ✅ ドキュメントが更新されている
+- PASS: CRITICALな問題が見つからない
+- PASS: すべてのHIGH問題が対処されている
+- PASS: セキュリティチェックリストが完了している
+- PASS: コード内に秘密情報がない
+- PASS: 依存関係が最新である
+- PASS: テストにセキュリティシナリオが含まれている
+- PASS: ドキュメントが更新されている
 
 ---
 

@@ -313,39 +313,39 @@ npm run test:coverage
 
 ## 避けるべき一般的なテストの間違い
 
-### ❌ WRONG: 実装の詳細をテストする
+### FAIL: WRONG: 実装の詳細をテストする
 ```typescript
 // Don't test internal state
 expect(component.state.count).toBe(5)
 ```
 
-### ✅ CORRECT: ユーザーに見える振る舞いをテストする
+### PASS: CORRECT: ユーザーに見える振る舞いをテストする
 ```typescript
 // Test what users see
 expect(screen.getByText('Count: 5')).toBeInTheDocument()
 ```
 
-### ❌ WRONG: 壊れやすいセレクタ
+### FAIL: WRONG: 壊れやすいセレクタ
 ```typescript
 // Breaks easily
 await page.click('.css-class-xyz')
 ```
 
-### ✅ CORRECT: セマンティックセレクタ
+### PASS: CORRECT: セマンティックセレクタ
 ```typescript
 // Resilient to changes
 await page.click('button:has-text("Submit")')
 await page.click('[data-testid="submit-button"]')
 ```
 
-### ❌ WRONG: テストの分離がない
+### FAIL: WRONG: テストの分離がない
 ```typescript
 // Tests depend on each other
 test('creates user', () => { /* ... */ })
 test('updates same user', () => { /* depends on previous test */ })
 ```
 
-### ✅ CORRECT: 独立したテスト
+### PASS: CORRECT: 独立したテスト
 ```typescript
 // Each test sets up its own data
 test('creates user', () => {
