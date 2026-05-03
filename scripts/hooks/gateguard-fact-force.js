@@ -121,7 +121,7 @@ function isChecked(key) {
 
 function sanitizePath(filePath) {
   // Strip control chars (including null), bidi overrides, and newlines
-  return filePath.replace(/[\x00-\x1f\x7f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').trim().slice(0, 500);
+  return filePath.replace(/[\x00-\x1f\x7f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, ' ').trim().slice(0, 500);// eslint-disable-line no-control-regex
 }
 
 // --- Gate messages ---
