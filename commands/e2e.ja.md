@@ -182,7 +182,7 @@ Artifacts generated:
 ╔══════════════════════════════════════════════════════════════╗
 ║                    E2E Test Results                          ║
 ╠══════════════════════════════════════════════════════════════╣
-║ Status:     ✅ ALL TESTS PASSED                              ║
+║ Status:     PASS: ALL TESTS PASSED                              ║
 ║ Total:      3 tests                                          ║
 ║ Passed:     3 (100%)                                         ║
 ║ Failed:     0                                                ║
@@ -191,15 +191,15 @@ Artifacts generated:
 ╚══════════════════════════════════════════════════════════════╝
 
 Artifacts:
-📸 Screenshots: 2 files
-📹 Videos: 0 files (only on failure)
-🔍 Traces: 0 files (only on failure)
-📊 HTML Report: playwright-report/index.html
+ Screenshots: 2 files
+ Videos: 0 files (only on failure)
+ Traces: 0 files (only on failure)
+ HTML Report: playwright-report/index.html
 
 View report: npx playwright show-report
 ```
 
-✅ E2E test suite ready for CI/CD integration!
+PASS: E2E test suite ready for CI/CD integration!
 ```
 
 ## テストアーティファクト
@@ -235,7 +235,7 @@ open artifacts/search-results.png
 テストが断続的に失敗する場合：
 
 ```
-⚠️  FLAKY TEST DETECTED: tests/e2e/markets/trade.spec.ts
+WARNING:  FLAKY TEST DETECTED: tests/e2e/markets/trade.spec.ts
 
 Test passed 7/10 runs (70% pass rate)
 
@@ -254,10 +254,10 @@ Quarantine recommendation: Mark as test.fixme() until fixed
 ## ブラウザ設定
 
 デフォルトで複数のブラウザでテストが実行される：
-- ✅ Chromium (Desktop Chrome)
-- ✅ Firefox (Desktop)
-- ✅ WebKit (Desktop Safari)
-- ✅ Mobile Chrome (optional)
+- PASS: Chromium (Desktop Chrome)
+- PASS: Firefox (Desktop)
+- PASS: WebKit (Desktop Safari)
+- PASS: Mobile Chrome (optional)
 
 `playwright.config.ts` でブラウザを調整する。
 
@@ -285,7 +285,7 @@ CIパイプラインに追加：
 
 PMXの場合、以下のE2Eテストを優先する：
 
-**🔴 CRITICAL (常にパス必須):**
+**CRITICAL (常にパス必須):**
 1. ユーザーはウォレットを接続できる
 2. ユーザーは市場を閲覧できる
 3. ユーザーは市場を検索できる (セマンティック検索)
@@ -294,7 +294,7 @@ PMXの場合、以下のE2Eテストを優先する：
 6. 市場が正しく解決される
 7. ユーザーは資金を引き出せる
 
-**🟡 IMPORTANT (重要):**
+**IMPORTANT (重要):**
 1. 市場作成フロー
 2. ユーザープロフィール更新
 3. リアルタイム価格更新
@@ -305,20 +305,20 @@ PMXの場合、以下のE2Eテストを優先する：
 ## ベストプラクティス
 
 **行うべきこと (DO):**
-- ✅ 保守性のためにPage Object Modelを使用する
-- ✅ セレクタには `data-testid` 属性を使用する
-- ✅ 任意のタイムアウトではなく、APIレスポンスを待つ
-- ✅ 重要なユーザージャーニーをエンドツーエンドでテストする
-- ✅ mainへのマージ前にテストを実行する
-- ✅ テスト失敗時にアーティファクトをレビューする
+- PASS: 保守性のためにPage Object Modelを使用する
+- PASS: セレクタには `data-testid` 属性を使用する
+- PASS: 任意のタイムアウトではなく、APIレスポンスを待つ
+- PASS: 重要なユーザージャーニーをエンドツーエンドでテストする
+- PASS: mainへのマージ前にテストを実行する
+- PASS: テスト失敗時にアーティファクトをレビューする
 
 **行ってはいけないこと (DON'T):**
-- ❌ 壊れやすいセレクタを使用しない (CSSクラスは変更される可能性がある)
-- ❌ 実装の詳細をテストしない
-- ❌ 本番環境に対してテストを実行しない
-- ❌ Flakyテストを無視しない
-- ❌ 失敗時のアーティファクトレビューをスキップしない
-- ❌ すべてのエッジケースをE2Eでテストしない (単体テストを使用する)
+- FAIL: 壊れやすいセレクタを使用しない (CSSクラスは変更される可能性がある)
+- FAIL: 実装の詳細をテストしない
+- FAIL: 本番環境に対してテストを実行しない
+- FAIL: Flakyテストを無視しない
+- FAIL: 失敗時のアーティファクトレビューをスキップしない
+- FAIL: すべてのエッジケースをE2Eでテストしない (単体テストを使用する)
 
 ## 重要な注意点
 
