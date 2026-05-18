@@ -1,22 +1,20 @@
 name: ja-JP Translation Sync
 
 # ---------------------------------------------------------------------------
-# Translation backend priority:
-#   1. Jules API  (primary)  — submits a session; Jules commits to the branch
-#                              directly and this workflow creates the PR.
-#                              Falls back when Jules returns 429 / unavailable.
-#   2. Gemini API (fallback) — translates inline (free tier: gemini-2.0-flash).
+# Architecture:
+#   Gemini API  → translate missing files (free tier, gemini-2.0-flash)
+#   GitHub Actions → commit files, push branch, open PR
+#   Jules API   → post inline review comments on the translation PR
 #
 # Required secrets:
-#   JULES_API_KEY     — from jules.google.com Settings (optional but preferred)
-#   JULES_SOURCE_ID   — repository source ID from jules.google.com/sources
-#   GEMINI_API_KEY    — Google AI Studio key (fallback, free tier available)
+#   GEMINI_API_KEY   – Google AI Studio (free tier sufficient)
+#   JULES_API_KEY    – jules.google.com Settings  (optional; review skipped if absent)
+#   JULES_SOURCE_ID  – jules.google.com/sources   (required when JULES_API_KEY is set)
 # ---------------------------------------------------------------------------
 
 on:
   schedule:
-    # Daily at 02:00 UTC (11:00 JST)
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * *'   # Daily 02:00 UTC (11:00 JST)
   workflow_dispatch:
     inputs:
       max_files:
@@ -25,12 +23,6 @@ on:
         default: '20'
       dry_run:
         description: 'Dry run — detect only, skip translation'
-        required: false
-        type: boolean
-        default: false
-      force_gemini:
-        description: 'Skip Jules and use Gemini directly'
-        required: false
         type: boolean
         default: false
 
@@ -44,236 +36,188 @@ concurrency:
 
 jobs:
   # ── 1. Sync upstream + detect missing ──────────────────────────────────────
-  sync-upstream:
-    name: Sync upstream & detect missing translations
+  sync-and-detect:
+    name: Sync upstream & detect missing
     runs-on: ubuntu-latest
     outputs:
       has_missing:   ${{ steps.detect.outputs.has_missing }}
       missing_count: ${{ steps.detect.outputs.missing_count }}
     steps:
-      - name: Checkout fork
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Add upstream remote & fetch
+      - name: Sync upstream
         run: |
           git remote add upstream https://github.com/affaan-m/everything-claude-code.git || true
           git fetch upstream main --quiet
-
-      - name: Merge upstream (preserve existing ja-JP translations)
-        run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git merge upstream/main \
-            --no-edit \
-            --strategy-option=ours \
-            -m "chore: sync upstream/main [skip ci]" \
-            || true
+          git merge upstream/main --no-edit --strategy-option=ours \
+            -m "chore: sync upstream/main [skip ci]" || true
+          git push origin main
 
-      - name: Push synced main
-        run: git push origin main
-
-      - name: Setup Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: '20.x'
 
       - name: Detect missing translations
         id: detect
         run: |
-          node scripts/translate-diff.js --dry-run --max 9999 --output-list /tmp/missing-files.txt
-          COUNT=$(grep -c . /tmp/missing-files.txt 2>/dev/null || echo 0)
+          node scripts/translate-diff.js --dry-run --max 9999 \
+            --output-list /tmp/missing.txt
+          COUNT=$(grep -c . /tmp/missing.txt 2>/dev/null || echo 0)
           echo "missing_count=$COUNT" >> "$GITHUB_OUTPUT"
-          if [ "$COUNT" -gt "0" ]; then
-            echo "has_missing=true"  >> "$GITHUB_OUTPUT"
-          else
-            echo "has_missing=false" >> "$GITHUB_OUTPUT"
-          fi
-          echo "Missing translations: $COUNT"
+          echo "has_missing=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "Missing: $COUNT file(s)"
 
-  # ── 2. Translate (Jules primary → Gemini fallback) ─────────────────────────
-  translate:
-    name: Translate missing files
-    needs: sync-upstream
-    if: needs.sync-upstream.outputs.has_missing == 'true' && inputs.dry_run != true
+  # ── 2. Translate with Gemini + commit + open PR ───────────────────────────
+  translate-and-pr:
+    name: Translate (Gemini) & open PR
+    needs: sync-and-detect
+    if: needs.sync-and-detect.outputs.has_missing == 'true' && inputs.dry_run != true
     runs-on: ubuntu-latest
     outputs:
-      backend:       ${{ steps.run.outputs.backend }}
-      jules_handled: ${{ steps.run.outputs.jules_handled }}
-      translated:    ${{ steps.changes.outputs.count }}
-      branch:        ${{ steps.branch.outputs.name }}
+      pr_number: ${{ steps.open-pr.outputs.pr_number }}
+      branch:    ${{ steps.branch.outputs.name }}
+      translated: ${{ steps.changes.outputs.count }}
     steps:
-      - name: Checkout fork
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: '20.x'
 
       - name: Set branch name
         id: branch
         run: |
-          BRANCH="auto/ja-jp-translation-$(date +'%Y%m%d-%H%M')"
-          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "name=auto/ja-jp-$(date +'%Y%m%d-%H%M')" >> "$GITHUB_OUTPUT"
 
-      - name: Create translation branch
+      - name: Create branch
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "${{ steps.branch.outputs.name }}"
-          git push origin "${{ steps.branch.outputs.name }}"
 
-      - name: Run translation (Jules → Gemini fallback)
-        id: run
+      - name: Translate with Gemini
         env:
-          JULES_API_KEY:   ${{ secrets.JULES_API_KEY }}
-          JULES_SOURCE_ID: ${{ secrets.JULES_SOURCE_ID }}
-          GEMINI_API_KEY:  ${{ secrets.GEMINI_API_KEY }}
-          GITHUB_REF_NAME: ${{ steps.branch.outputs.name }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          MAX="${{ inputs.max_files || '20' }}"
-          EXTRA_FLAGS=""
-          if [ "${{ inputs.force_gemini }}" = "true" ]; then
-            EXTRA_FLAGS="--force-gemini"
-          fi
+          node scripts/translate-diff.js --max "${{ inputs.max_files || '20' }}"
 
-          # Capture which backend was used via exit code pattern:
-          #   Script prints "Jules session created" → jules_handled=true
-          #   Otherwise Gemini ran inline → jules_handled=false
-          OUTPUT=$(node scripts/translate-diff.js --max "$MAX" $EXTRA_FLAGS 2>&1)
-          echo "$OUTPUT"
-
-          if echo "$OUTPUT" | grep -q "Jules session created"; then
-            echo "backend=jules"       >> "$GITHUB_OUTPUT"
-            echo "jules_handled=true"  >> "$GITHUB_OUTPUT"
-          else
-            echo "backend=gemini"      >> "$GITHUB_OUTPUT"
-            echo "jules_handled=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      # When Jules handled it, it commits directly — pull those commits.
-      - name: Pull Jules commits (if Jules handled translation)
-        if: steps.run.outputs.jules_handled == 'true'
-        run: |
-          # Jules commits asynchronously; wait up to 10 min for its commit.
-          echo "Waiting for Jules to commit translated files..."
-          for i in $(seq 1 20); do
-            sleep 30
-            git fetch origin "${{ steps.branch.outputs.name }}"
-            AHEAD=$(git rev-list HEAD..origin/"${{ steps.branch.outputs.name }}" --count)
-            if [ "$AHEAD" -gt "0" ]; then
-              echo "Jules committed $AHEAD new commit(s). Pulling."
-              git pull origin "${{ steps.branch.outputs.name }}"
-              break
-            fi
-            echo "  attempt $i/20 — no Jules commits yet..."
-          done
-
-      - name: Count new translation files
+      - name: Count translated files
         id: changes
         run: |
-          NEW=$(git status --short docs/ja-JP/ | wc -l | tr -d ' ')
-          echo "count=$NEW" >> "$GITHUB_OUTPUT"
-          echo "New/modified files: $NEW"
+          COUNT=$(git status --short docs/ja-JP/ | wc -l | tr -d ' ')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "Translated: $COUNT file(s)"
 
-      # Gemini wrote files locally — commit and push them.
-      - name: Commit Gemini translations
-        if: steps.run.outputs.jules_handled == 'false' && steps.changes.outputs.count != '0'
+      - name: Commit & push
+        if: steps.changes.outputs.count != '0'
         run: |
           git add docs/ja-JP/
-          COUNT=$(git diff --cached --name-only | wc -l | tr -d ' ')
-          git commit -m "feat(ja-JP): auto-translate ${COUNT} file(s) via Gemini [skip ci]"
+          NFILES=$(git diff --cached --name-only | wc -l | tr -d ' ')
+          git commit -m "feat(ja-JP): auto-translate ${NFILES} file(s) via Gemini [skip ci]"
           git push origin "${{ steps.branch.outputs.name }}"
 
-  # ── 3. Open PR ─────────────────────────────────────────────────────────────
-  open-pr:
-    name: Open Pull Request
-    needs: [sync-upstream, translate]
-    if: needs.translate.outputs.translated != '0' || needs.translate.outputs.jules_handled == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create Pull Request
+      - name: Open PR
+        id: open-pr
+        if: steps.changes.outputs.count != '0'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const branch     = '${{ needs.translate.outputs.branch }}';
-            const backend    = '${{ needs.translate.outputs.backend }}';
-            const julesHandled = '${{ needs.translate.outputs.jules_handled }}' === 'true';
-            const missing    = parseInt('${{ needs.sync-upstream.outputs.missing_count }}', 10);
-            const max        = parseInt('${{ inputs.max_files || 20 }}', 10);
-            const translated = parseInt('${{ needs.translate.outputs.translated }}', 10) || max;
+            const missing    = parseInt('${{ needs.sync-and-detect.outputs.missing_count }}', 10);
+            const translated = parseInt('${{ steps.changes.outputs.count }}', 10);
             const remaining  = Math.max(0, missing - translated);
-
-            const backendLabel = julesHandled
-              ? '🤖 Jules API (Google)'
-              : '💫 Gemini API (フォールバック)';
+            const branch     = '${{ steps.branch.outputs.name }}';
 
             const body = [
               '## 自動翻訳 PR',
               '',
-              `upstream の最新変更を同期し、**${translated} ファイル**を日本語に翻訳しました。`,
+              `upstream の最新変更を同期し、**${translated} ファイル**を Gemini API で日本語翻訳しました。`,
               '',
-              '| 項目 | 内容 |',
+              '| 項目 | 件数 |',
               '|------|------|',
-              `| 翻訳エンジン | ${backendLabel} |`,
-              `| 翻訳済み（このPR） | ${translated} 件 |`,
-              `| 残り未翻訳 | ${remaining} 件 |`,
+              `| 翻訳済み（このPR） | ${translated} |`,
+              `| 残り未翻訳 | ${remaining} |`,
               '',
-              julesHandled
-                ? '> Jules がリポジトリを直接操作して翻訳・コミットしました。'
-                : '> Jules がビジー（429）だったため Gemini にフォールバックしました。',
+              '## 翻訳ルール',
               '',
-              '## 確認事項',
+              '- YAMLフロントマターのフィールド名（`name:`, `origin:`, `tools:`, `model:`）は英語のまま',
+              '- `description:` の値のみ日本語に翻訳',
+              '- コードブロック内のソースコードは翻訳しない（`//` `#` コメントのみ翻訳）',
+              '- Markdown構造（見出しレベル・テーブル・リスト）は原文と完全一致',
+              '- 技術用語はカタカナ表記（エージェント、スキル、パイプライン 等）',
+              '',
+              '## レビューチェックリスト',
               '',
               '- [ ] 翻訳の品質を目視確認',
               '- [ ] YAMLフロントマターのフィールド名が英語のままか確認',
               '- [ ] コードブロック内のソースコードが翻訳されていないか確認',
               '- [ ] 技術用語がカタカナ表記になっているか確認',
+              '- [ ] Markdown構造が崩れていないか確認',
               '',
               remaining > 0
                 ? `> ℹ️ **${remaining} ファイル**が未翻訳のまま残っています。次回の自動実行で処理されます。`
                 : '> ✅ すべてのファイルが翻訳されました。',
               '',
               '---',
-              '*このPRは [ja-JP Translation Sync](../../blob/main/.github/workflows/ja-jp-translation-sync.yml) ワークフローによって自動生成されました。*',
+              '*翻訳エンジン: Gemini API (gemini-2.0-flash) | レビュー: Jules API*',
+              '*[ja-JP Translation Sync](../../blob/main/.github/workflows/ja-jp-translation-sync.yml) ワークフローにより自動生成*',
             ].join('\n');
-
-            // Check if a PR for this branch already exists (Jules may have created one)
-            const existing = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo:  context.repo.repo,
-              head:  `${context.repo.owner}:${branch}`,
-              state: 'open',
-            });
-
-            if (existing.data.length > 0) {
-              console.log(`PR already exists: ${existing.data[0].html_url}`);
-              return;
-            }
 
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo:  context.repo.repo,
-              title: `feat(ja-JP): auto-translate ${translated} file(s) [${backend}]`,
+              title: `feat(ja-JP): auto-translate ${translated} file(s) via Gemini`,
               head:  branch,
               base:  'main',
               body,
             });
             console.log(`PR created: ${pr.data.html_url}`);
+            core.setOutput('pr_number', String(pr.data.number));
+
+  # ── 3. Jules review ────────────────────────────────────────────────────────
+  jules-review:
+    name: Jules translation review
+    needs: translate-and-pr
+    if: needs.translate-and-pr.outputs.pr_number != '' && needs.translate-and-pr.outputs.translated != '0'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: scripts/
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '20.x'
+
+      - name: Request Jules review
+        env:
+          JULES_API_KEY:   ${{ secrets.JULES_API_KEY }}
+          JULES_SOURCE_ID: ${{ secrets.JULES_SOURCE_ID }}
+          PR_NUMBER:       ${{ needs.translate-and-pr.outputs.pr_number }}
+          GITHUB_HEAD_REF: ${{ needs.translate-and-pr.outputs.branch }}
+        run: |
+          if [ -z "$JULES_API_KEY" ]; then
+            echo "ℹ️  JULES_API_KEY not configured — skipping Jules review."
+            exit 0
+          fi
+          node scripts/jules-review-request.js \
+            --pr "$PR_NUMBER" \
+            --branch "$GITHUB_HEAD_REF"
 
   # ── 4. All up to date ──────────────────────────────────────────────────────
-  report-no-missing:
+  up-to-date:
     name: All translations up to date
-    needs: sync-upstream
-    if: needs.sync-upstream.outputs.has_missing == 'false'
+    needs: sync-and-detect
+    if: needs.sync-and-detect.outputs.has_missing == 'false'
     runs-on: ubuntu-latest
     steps:
       - run: echo "✅ ja-JP translations are fully up to date with upstream."
