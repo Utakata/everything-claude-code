@@ -146,6 +146,64 @@ The task pane:
 
 ---
 
+## Copilot Sheet Read Order — Critical Caveat
+
+**M365 Copilot (Opus 4.7) のシート読み取り順序は公式に保証されていません。**  
+ワークブックには階層構造がなく、どのシートをどの順番で読むかはコンテキストや
+プロンプトによって変動します。これに対する ECC の対策:
+
+### 1. シート名の数値プレフィックス
+
+`generate-excel-workbook.js` は全シートに `01_`, `02_`, ... を自動付加します:
+
+```
+00_INDEX                    ← 必ず最初に読ませる（数値最小）
+01_tdd-workflow
+02_frontend-patterns
+03_python-patterns
+...
+```
+
+辞書順ソート時に `00_INDEX` が必ず先頭に来ます。Copilot がワークブックを
+スキャンするとき、この順序を尊重する可能性が高まります。
+
+### 2. A1 セルの `__COPILOT__` ディレクティブ
+
+各シートの A1 セルには明示的な指示が自動挿入されます:
+
+```
+A1: __COPILOT__
+B1: COPILOT DIRECTIVE: This sheet is ECC skill "tdd-workflow".
+    Read all rows below before generating code.
+    Reference this skill by name when writing code in other sheets.
+```
+
+これにより、Copilot がどのシートを読んでも、A1 で「何のシートか」「どう使うか」
+を即座に把握できます。プロンプトインジェクション耐性も向上します。
+
+### 3. `00_INDEX` シートの集約
+
+各ワークブックの `00_INDEX` シートには:
+- ワークブック全体の目的（Copilot 向けインストラクション）
+- 全シートの読み取り優先度
+- 各シートの 1 行サマリー
+
+これにより、Copilot は `00_INDEX` を最初に読めば全体構造を理解できます。
+
+### 4. ユーザー側のプロンプト指示
+
+明示的に順序を指定するプロンプトパターン:
+
+```
+"最初に00_INDEXシートを読んで、その後01_tdd-workflowシートの内容に従って
+App.jsxシートにテストを書いて"
+```
+
+シート名の `01_` プレフィックスを含めることで、Copilot が正しいシートを
+ピンポイントで特定できます。
+
+---
+
 ## Hook Architecture (深堀り)
 
 ECC の hook 設計を Excel Online でエミュレートする方法:
