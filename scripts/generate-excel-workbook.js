@@ -83,11 +83,43 @@ function writeWorkbookAsCsv(sheets, outputDir) {
 }
 
 function buildIndexSheet(sheetNames, kind) {
-  const rows = [['Sheet (File)', 'Purpose']];
-  for (const name of sheetNames) {
-    rows.push([name, `ECC ${kind}: ${name}`]);
-  }
+  // Copilot reads sheets in unknown order. The 00_README sheet enforces:
+  //   1. Read this first (numeric prefix sorts it to position 0)
+  //   2. A1 contains an explicit instruction directing Copilot's behavior
+  //   3. Sheet list with priority order so Copilot knows what to load next
+  const rows = [];
+  rows.push([
+    'INSTRUCTION FOR COPILOT (Opus 4.7)',
+    `Read this sheet FIRST. This workbook contains ${kind} content for ECC. ` +
+    `Sheet names follow the pattern "NN_name" where NN is the read-priority order. ` +
+    `Always reference sheets by their FULL name including the numeric prefix. ` +
+    `When asked to use a ${kind}, scan this index, then read the matching sheet's A1 cell ` +
+    `for that ${kind}'s primary directive before reading the rest of its cells.`,
+  ]);
+  rows.push(['', '']);
+  rows.push(['Read Order', 'Sheet Name', 'Purpose']);
+  sheetNames.forEach((name, i) => {
+    const priority = String(i + 1).padStart(2, '0');
+    rows.push([priority, name, `ECC ${kind}: ${name.replace(/^\d+_/, '')}`]);
+  });
   return rows;
+}
+
+function prefixSheetName(index, baseName) {
+  // 01_, 02_, ... — forces lexicographic ordering when Copilot scans sheets
+  const priority = String(index + 1).padStart(2, '0');
+  return `${priority}_${baseName}`.slice(0, 31);
+}
+
+function prependCopilotDirective(rows, kind, name) {
+  // A1 cell becomes the first thing Copilot sees when reading the sheet.
+  // This is the "system prompt" equivalent for sheet-as-file metaphor.
+  const directive = [
+    `COPILOT DIRECTIVE: This sheet is ECC ${kind} "${name}".`,
+    `Read all rows below before generating code.`,
+    `Reference this ${kind} by name when writing code in other sheets.`,
+  ].join(' ');
+  return [['__COPILOT__', directive], ['', ''], ...rows];
 }
 
 // ── Workbook builders ──────────────────────────────────────────────────────
@@ -102,12 +134,13 @@ function buildSkillsWorkbook(sourceDir) {
     const skillFile = path.join(skillsDir, entry.name, 'SKILL.md');
     const content = readFile(skillFile);
     if (!content) continue;
-    const sheetName = entry.name.slice(0, 31);
-    sheets[sheetName] = skillToRows(content);
+    const baseName = entry.name.slice(0, 28);
+    const sheetName = prefixSheetName(sheetNames.length, baseName);
+    sheets[sheetName] = prependCopilotDirective(skillToRows(content), 'skill', baseName);
     sheetNames.push(sheetName);
   }
 
-  sheets['_INDEX'] = buildIndexSheet(sheetNames, 'skill');
+  sheets['00_INDEX'] = buildIndexSheet(sheetNames, 'skill');
   return sheets;
 }
 
@@ -120,12 +153,13 @@ function buildRulesWorkbook(sourceDir) {
     if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
     const content = readFile(path.join(rulesDir, entry.name));
     if (!content) continue;
-    const sheetName = entry.name.replace('.md', '').slice(0, 31);
-    sheets[sheetName] = ruleToRows(content, entry.name);
+    const baseName = entry.name.replace('.md', '').slice(0, 28);
+    const sheetName = prefixSheetName(sheetNames.length, baseName);
+    sheets[sheetName] = prependCopilotDirective(ruleToRows(content, entry.name), 'rule', baseName);
     sheetNames.push(sheetName);
   }
 
-  sheets['_INDEX'] = buildIndexSheet(sheetNames, 'rule');
+  sheets['00_INDEX'] = buildIndexSheet(sheetNames, 'rule');
   return sheets;
 }
 
@@ -138,12 +172,13 @@ function buildAgentsWorkbook(sourceDir) {
     if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
     const content = readFile(path.join(agentsDir, entry.name));
     if (!content) continue;
-    const sheetName = entry.name.replace('.md', '').slice(0, 31);
-    sheets[sheetName] = agentToRows(content, entry.name);
+    const baseName = entry.name.replace('.md', '').slice(0, 28);
+    const sheetName = prefixSheetName(sheetNames.length, baseName);
+    sheets[sheetName] = prependCopilotDirective(agentToRows(content, entry.name), 'agent', baseName);
     sheetNames.push(sheetName);
   }
 
-  sheets['_INDEX'] = buildIndexSheet(sheetNames, 'agent');
+  sheets['00_INDEX'] = buildIndexSheet(sheetNames, 'agent');
   return sheets;
 }
 
@@ -156,12 +191,14 @@ function buildCommandsWorkbook(sourceDir) {
     if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
     const content = readFile(path.join(cmdsDir, entry.name));
     if (!content) continue;
-    const sheetName = entry.name.replace('.md', '').slice(0, 31);
-    sheets[sheetName] = [['Command', sheetName], ['Content', content.slice(0, 2000)]];
+    const baseName = entry.name.replace('.md', '').slice(0, 28);
+    const sheetName = prefixSheetName(sheetNames.length, baseName);
+    const rows = [['Command', baseName], ['Content', content.slice(0, 2000)]];
+    sheets[sheetName] = prependCopilotDirective(rows, 'command', baseName);
     sheetNames.push(sheetName);
   }
 
-  sheets['_INDEX'] = buildIndexSheet(sheetNames, 'command');
+  sheets['00_INDEX'] = buildIndexSheet(sheetNames, 'command');
   return sheets;
 }
 
