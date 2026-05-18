@@ -1,0 +1,185 @@
+name: ja-JP Translation Sync
+
+on:
+  schedule:
+    # Run daily at 02:00 UTC (11:00 JST)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      max_files:
+        description: 'Max files to translate per run (default: 20)'
+        required: false
+        default: '20'
+      dry_run:
+        description: 'Dry run (detect only, no translation)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ja-jp-translation-sync
+  cancel-in-progress: true
+
+jobs:
+  sync-upstream:
+    name: Sync upstream & detect missing translations
+    runs-on: ubuntu-latest
+    outputs:
+      has_missing: ${{ steps.detect.outputs.has_missing }}
+      missing_count: ${{ steps.detect.outputs.missing_count }}
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/affaan-m/everything-claude-code.git || true
+          git fetch upstream main --quiet
+
+      - name: Merge upstream into main
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Use ours strategy for ja-JP docs to avoid overwriting existing translations
+          git merge upstream/main \
+            --no-edit \
+            --strategy-option=ours \
+            -m "chore: sync upstream/main" \
+            || true
+
+      - name: Push synced main
+        run: git push origin main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '20.x'
+
+      - name: Detect missing translations
+        id: detect
+        run: |
+          node scripts/translate-diff.js --dry-run --max 1000 --output-list /tmp/missing-files.txt
+          COUNT=$(wc -l < /tmp/missing-files.txt | tr -d ' ')
+          echo "missing_count=$COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" -gt "0" ]; then
+            echo "has_missing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_missing=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "📋 Missing translations: $COUNT"
+
+  translate:
+    name: Translate missing files
+    needs: sync-upstream
+    if: needs.sync-upstream.outputs.has_missing == 'true' && inputs.dry_run != true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '20.x'
+
+      - name: Set branch name
+        id: branch
+        run: |
+          BRANCH="auto/ja-jp-translation-$(date +'%Y%m%d-%H%M')"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Create translation branch
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${{ steps.branch.outputs.name }}"
+
+      - name: Run translations
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          MAX="${{ inputs.max_files || '20' }}"
+          node scripts/translate-diff.js --max "$MAX"
+
+      - name: Check for new files
+        id: changes
+        run: |
+          NEW=$(git status --short docs/ja-JP/ | wc -l | tr -d ' ')
+          echo "count=$NEW" >> "$GITHUB_OUTPUT"
+          echo "New/modified translation files: $NEW"
+
+      - name: Commit translations
+        if: steps.changes.outputs.count != '0'
+        run: |
+          git add docs/ja-JP/
+          git commit -m "feat(ja-JP): auto-translate $(git diff --cached --name-only | wc -l | tr -d ' ') missing files [skip ci]"
+
+      - name: Push branch
+        if: steps.changes.outputs.count != '0'
+        run: git push origin "${{ steps.branch.outputs.name }}"
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.count != '0'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = '${{ steps.branch.outputs.name }}';
+            const missing = parseInt('${{ needs.sync-upstream.outputs.missing_count }}', 10);
+            const max = parseInt('${{ inputs.max_files || 20 }}', 10);
+            const translated = parseInt('${{ steps.changes.outputs.count }}', 10);
+            const remaining = Math.max(0, missing - translated);
+
+            const body = [
+              '## 自動翻訳 PR',
+              '',
+              `upstream の最新変更を同期し、**${translated} ファイル**を日本語に翻訳しました。`,
+              '',
+              '| 項目 | 件数 |',
+              '|------|------|',
+              `| 翻訳済み（このPR） | ${translated} |`,
+              `| 残り未翻訳 | ${remaining} |`,
+              '',
+              '## 確認事項',
+              '',
+              '- [ ] 翻訳の品質を目視確認',
+              '- [ ] YAMLフロントマターのフィールド名が英語のままか確認',
+              '- [ ] コードブロック内のソースコードが翻訳されていないか確認',
+              '- [ ] 技術用語がカタカナ表記になっているか確認',
+              '',
+              remaining > 0
+                ? `> ℹ️ **${remaining} ファイル**が未翻訳のまま残っています。次回の自動実行またはワークフローの手動トリガーで処理されます。`
+                : '> ✅ すべてのファイルが翻訳されました。',
+              '',
+              '---',
+              '*このPRは [ja-JP Translation Sync](../.github/workflows/ja-jp-translation-sync.yml) ワークフローによって自動生成されました。*',
+            ].join('\n');
+
+            await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `feat(ja-JP): auto-translate ${translated} file(s) from upstream sync`,
+              head: branch,
+              base: 'main',
+              body,
+            });
+
+  report-no-missing:
+    name: Report — all translations up to date
+    needs: sync-upstream
+    if: needs.sync-upstream.outputs.has_missing == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: All up to date
+        run: echo "✅ ja-JP translations are fully up to date with upstream."
