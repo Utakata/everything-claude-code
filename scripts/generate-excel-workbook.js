@@ -30,6 +30,9 @@ const {
 const {
   LANGUAGE_CONFIGS, getLanguageConfig, hasLanguage, listLanguages,
 } = require('./lib/excel-language-configs');
+const {
+  buildHistorySheet, buildDiffSheet, buildPromptSheet,
+} = require('./lib/excel-git-templates');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 
@@ -66,8 +69,10 @@ Options:
 Per-language workbook structure:
   00_INDEX     — HTML navigation in column B, plain-text outline in column A
   NN_<name>    — rule / skill / agent / command sheets in priority order
-  99_workspace — empty sheet where Copilot writes code
-  00_COMMITS   — snapshot log (seeded; appended by Task Pane snapshot.js)
+  90_workspace — empty sheet where Copilot writes code
+  98_HISTORY   — snapshot commit log (manual append)
+  99_DIFF      — INDIRECT formula diff between two snapshots
+  99_PROMPT    — TEXTJOIN prompt builder (copy A2 → paste to Copilot)
 `);
 }
 
@@ -240,23 +245,33 @@ function buildLanguageWorkbook(language, sourceRoot) {
     counter++;
   }
 
-  // Final two sheets: workspace (empty) + commits log (seeded)
+  // Trailing sheets: workspace + sheet-only Git templates (no plugins required)
   workbookSheets.push({
-    name: '99_workspace',
+    name: '90_workspace',
     kind: 'workspace',
     displayName: 'workspace',
     rows: [
-      ['__COPILOT__: Write code here. This is the user workspace sheet. Use other sheets (rules/skills/agents/commands) as context only.', ''],
+      ['__COPILOT__: Write code here. Use other sheets (rules/skills/agents/commands) as context only.', ''],
       ['', ''],
     ],
   });
   workbookSheets.push({
-    name: '00_COMMITS',
-    kind: 'commits',
-    displayName: 'commits log',
-    rows: [
-      ['timestamp', 'base_sheet', 'snapshot_sheet', 'author', 'message', 'parent_snapshot'],
-    ],
+    name: '98_HISTORY',
+    kind: 'history',
+    displayName: 'snapshot history',
+    rows: buildHistorySheet(),
+  });
+  workbookSheets.push({
+    name: '99_DIFF',
+    kind: 'diff',
+    displayName: 'cell diff',
+    rows: buildDiffSheet('90_workspace'),
+  });
+  workbookSheets.push({
+    name: '99_PROMPT',
+    kind: 'prompt',
+    displayName: 'prompt builder',
+    rows: buildPromptSheet(),
   });
 
   return { workbookSheets, cfg };

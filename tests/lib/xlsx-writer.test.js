@@ -171,6 +171,36 @@ function runTests() {
     fs.rmSync(tmp, { recursive: true });
   }));
 
+  record(test('addSheet accepts formula objects and does not chunk them', () => {
+    const wb = createWorkbook();
+    const sheet = addSheet(wb, 'formulas', [
+      [{ formula: '=SUM(A1:A10)' }],
+      [{ formula: '=IFERROR(A1,"")' }],
+      ['text', { formula: '=B1+1', value: '42' }],
+    ]);
+    assert.strictEqual(sheet.rows.length, 3);
+    assert.deepStrictEqual(sheet.rows[0][0], { formula: '=SUM(A1:A10)' });
+    assert.deepStrictEqual(sheet.rows[2][1], { formula: '=B1+1', value: '42' });
+  }));
+
+  record(test('writeWorkbook emits <f> tags for formula cells', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'xlsx-'));
+    const out = path.join(tmp, 'f.xlsx');
+    const wb = createWorkbook();
+    addSheet(wb, 'fs', [
+      ['label', { formula: '=SUM(A2:A5)' }],
+      ['cached', { formula: '=A1+1', value: '99' }],
+    ]);
+    writeWorkbook(wb, out);
+    const xml = readZip(fs.readFileSync(out))['xl/worksheets/sheet1.xml'].toString('utf8');
+    assert.ok(xml.includes('<f>SUM(A2:A5)</f>'), 'formula should appear in <f> tag without leading =');
+    assert.ok(xml.includes('<f>A1+1</f>'), 'second formula should appear without leading =');
+    assert.ok(xml.includes('<v>99</v>'), 'cached value should appear in <v> tag');
+    // Formula cells (column B) must not carry t="inlineStr"
+    assert.ok(!/<c r="B\d+" t="inlineStr"/.test(xml), 'formula cells must not use inlineStr type');
+    fs.rmSync(tmp, { recursive: true });
+  }));
+
   record(test('writeWorkbook truncates a single cell at EXCEL_CELL_MAX even after chunking', () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'xlsx-'));
     const out = path.join(tmp, 'out.xlsx');

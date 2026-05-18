@@ -134,11 +134,11 @@ function runTests() {
     assert.ok(rows[0][1].includes('<table>'));
   }));
 
-  record(test('buildLanguageWorkbook returns sheets ending with 99_workspace + 00_COMMITS', () => {
+  record(test('buildLanguageWorkbook returns sheets ending with 90_workspace + 98_HISTORY + 99_DIFF + 99_PROMPT', () => {
     const { workbookSheets } = buildLanguageWorkbook('python', REPO_ROOT);
     assert.ok(workbookSheets.length > 5);
-    const tail = workbookSheets.slice(-2).map((s) => s.name);
-    assert.deepStrictEqual(tail, ['99_workspace', '00_COMMITS']);
+    const tail = workbookSheets.slice(-4).map((s) => s.name);
+    assert.deepStrictEqual(tail, ['90_workspace', '98_HISTORY', '99_DIFF', '99_PROMPT']);
   }));
 
   record(test('every language config produces a writable workbook', () => {
@@ -159,8 +159,10 @@ function runTests() {
     const wbXml = files['xl/workbook.xml'].toString('utf8');
     assert.ok(wbXml.includes('name="00_INDEX"'));
     assert.ok(/name="01_/.test(wbXml));
-    assert.ok(wbXml.includes('name="99_workspace"'));
-    assert.ok(wbXml.includes('name="00_COMMITS"'));
+    assert.ok(wbXml.includes('name="90_workspace"'));
+    assert.ok(wbXml.includes('name="98_HISTORY"'));
+    assert.ok(wbXml.includes('name="99_DIFF"'));
+    assert.ok(wbXml.includes('name="99_PROMPT"'));
     fs.rmSync(tmp, { recursive: true });
   }));
 
@@ -182,7 +184,10 @@ function runTests() {
     const dir = writeLanguageCsv('general', workbookSheets, cfg, tmp);
     const files = fs.readdirSync(dir).filter((f) => f.endsWith('.csv')).sort();
     assert.ok(files.includes('00_INDEX.csv'));
-    assert.ok(files.includes('99_workspace.csv'));
+    assert.ok(files.includes('90_workspace.csv'));
+    assert.ok(files.includes('98_HISTORY.csv'));
+    assert.ok(files.includes('99_DIFF.csv'));
+    assert.ok(files.includes('99_PROMPT.csv'));
     fs.rmSync(tmp, { recursive: true });
   }));
 

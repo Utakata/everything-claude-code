@@ -159,7 +159,9 @@ function addSheet(wb, name, rows, opts = {}) {
   for (const row of rows) {
     const cells = normaliseRow(row);
     const longIdx = cells.findIndex((c) => typeof c === 'string' && c.length > HTML_CHUNK_SIZE);
-    if (longIdx === -1) { expanded.push(cells); continue; }
+    if (longIdx === -1 || cells.some((c) => c !== null && typeof c === 'object' && c.formula)) {
+      expanded.push(cells); continue;
+    }
     const longVal = cells[longIdx];
     const chunks = chunkString(longVal, HTML_CHUNK_SIZE);
     const aValue = cells[0] != null ? String(cells[0]) : '';
@@ -211,6 +213,14 @@ function renderSheetXml(sheet) {
     const cellsXml = row.map((value, cIdx) => {
       if (value == null || value === '') return '';
       const ref = `${colLetter(cIdx)}${rowNum}`;
+      if (value !== null && typeof value === 'object' && typeof value.formula === 'string') {
+        // OOXML <f> content must NOT include the leading '=' — Excel adds it.
+        const expr = value.formula.startsWith('=') ? value.formula.slice(1) : value.formula;
+        const cachedVal = value.value != null
+          ? `<v>${xmlEscape(String(value.value))}</v>`
+          : '';
+        return `<c r="${ref}"><f>${xmlEscape(expr)}</f>${cachedVal}</c>`;
+      }
       const safe = xmlSafeString(value);
       const truncated = safe.length > EXCEL_CELL_MAX ? safe.slice(0, EXCEL_CELL_MAX) : safe;
       const preserve = /^\s|\s$/.test(truncated) ? ' xml:space="preserve"' : '';
