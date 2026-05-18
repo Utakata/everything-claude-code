@@ -1,0 +1,91 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
+  "manifestVersion": "devPreview",
+  "version": "1.0.0",
+  "id": "ecc-excel-copilot-plugin",
+  "name": {
+    "short": "ECC + Copilot",
+    "full": "Everything Claude Code — Excel IDE Harness"
+  },
+  "description": {
+    "short": "ECC skills and React artifact viewer for Excel IDE workflows",
+    "full": "Loads ECC skills/rules as Copilot context and renders React (CDN) artifacts directly in a task pane. Each Excel sheet acts as a code file. Microsoft 365 Enterprise Copilot writes code; this add-in previews it."
+  },
+  "developer": {
+    "name": "ECC",
+    "websiteUrl": "https://ecc.tools",
+    "privacyUrl": "https://ecc.tools/privacy",
+    "termsOfUseUrl": "https://ecc.tools/terms"
+  },
+  "icons": {
+    "color": "assets/color.png",
+    "outline": "assets/outline.png"
+  },
+  "accentColor": "#6366F1",
+  "staticTabs": [
+    {
+      "entityId": "ecc-taskpane",
+      "name": "ECC Artifact Viewer",
+      "contentUrl": "https://YOUR_DOMAIN/taskpane/index.html",
+      "scopes": ["personal"]
+    }
+  ],
+  "extensions": [
+    {
+      "requirements": {
+        "scopes": ["workbook"],
+        "capabilities": [
+          { "name": "ExcelApi", "minVersion": "1.1" }
+        ]
+      },
+      "runtimes": [
+        {
+          "requirements": {
+            "capabilities": [{ "name": "ExcelApi", "minVersion": "1.1" }]
+          },
+          "id": "TaskPaneRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://YOUR_DOMAIN/taskpane/index.html"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "ShowTaskPane",
+              "type": "openPage",
+              "pinnable": true
+            }
+          ]
+        }
+      ],
+      "ribbons": [
+        {
+          "contexts": ["default"],
+          "tabs": [
+            {
+              "builtInTabId": "TabHome",
+              "groups": [
+                {
+                  "id": "EccGroup",
+                  "label": "ECC Copilot",
+                  "controls": [
+                    {
+                      "id": "ShowArtifactPane",
+                      "type": "button",
+                      "label": "Artifact Viewer",
+                      "actionId": "ShowTaskPane",
+                      "icons": [
+                        { "size": 16, "url": "https://YOUR_DOMAIN/assets/icon-16.png" },
+                        { "size": 32, "url": "https://YOUR_DOMAIN/assets/icon-32.png" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

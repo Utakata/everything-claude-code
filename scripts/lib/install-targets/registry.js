@@ -3,6 +3,7 @@ const claudeHome = require('./claude-home');
 const codebuddyProject = require('./codebuddy-project');
 const codexHome = require('./codex-home');
 const cursorProject = require('./cursor-project');
+const excelPlugin = require('./excel-plugin');
 const geminiProject = require('./gemini-project');
 const joycodeProject = require('./joycode-project');
 const opencodeHome = require('./opencode-home');
@@ -14,6 +15,7 @@ const ADAPTERS = Object.freeze([
   cursorProject,
   antigravityProject,
   codexHome,
+  excelPlugin,
   geminiProject,
   opencodeHome,
   codebuddyProject,

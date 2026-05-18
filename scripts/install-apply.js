@@ -35,6 +35,7 @@ Targets:
   cursor       - Install rules, hooks, and bundled Cursor configs to ./.cursor/
   antigravity  - Install rules, workflows, skills, and agents to ./.agent/
   codex        - Install shared agents/config into ~/.codex/
+  excel        - Install skills, rules, agents, and React artifact viewer scaffold to ./.excel-plugin/
   gemini       - Install project-local Gemini config into ./.gemini/
   opencode     - Install shared commands/hooks/config into ~/.opencode/
   codebuddy    - Install commands, agents, skills, and flattened rules into ./.codebuddy/
