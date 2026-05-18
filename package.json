@@ -46,6 +46,7 @@
     ".codex/",
     ".codex-plugin/",
     ".cursor/",
+    ".excel-plugin/",
     ".gemini/",
     ".opencode/",
     ".qwen/",
