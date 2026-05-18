@@ -104,6 +104,17 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "${{ steps.branch.outputs.name }}"
 
+      - name: Export translation rules for PR body
+        id: rules
+        run: |
+          # Emit RULES_MARKDOWN from translation-rules.js as a multiline output
+          RULES=$(node -e "const r=require('./scripts/lib/translation-rules'); process.stdout.write(r.RULES_MARKDOWN);")
+          {
+            echo "markdown<<RULES_EOF"
+            echo "$RULES"
+            echo "RULES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Translate with Gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -137,6 +148,8 @@ jobs:
             const remaining  = Math.max(0, missing - translated);
             const branch     = '${{ steps.branch.outputs.name }}';
 
+            const rulesMarkdown = `${{ steps.rules.outputs.markdown }}`;
+
             const body = [
               '## 自動翻訳 PR',
               '',
@@ -147,13 +160,7 @@ jobs:
               `| 翻訳済み（このPR） | ${translated} |`,
               `| 残り未翻訳 | ${remaining} |`,
               '',
-              '## 翻訳ルール',
-              '',
-              '- YAMLフロントマターのフィールド名（`name:`, `origin:`, `tools:`, `model:`）は英語のまま',
-              '- `description:` の値のみ日本語に翻訳',
-              '- コードブロック内のソースコードは翻訳しない（`//` `#` コメントのみ翻訳）',
-              '- Markdown構造（見出しレベル・テーブル・リスト）は原文と完全一致',
-              '- 技術用語はカタカナ表記（エージェント、スキル、パイプライン 等）',
+              rulesMarkdown,
               '',
               '## レビューチェックリスト',
               '',

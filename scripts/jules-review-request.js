@@ -16,6 +16,7 @@
 'use strict';
 
 const https = require('https');
+const { REVIEW_PROMPT_BODY } = require('./lib/translation-rules');
 
 const JULES_HOST = 'jules.googleapis.com';
 const JULES_PATH = '/v1alpha';
@@ -71,23 +72,10 @@ async function main() {
   if (!BRANCH)   { throw new Error('--branch <branch> is required'); }
 
   const prompt = [
-    `You are a Japanese technical translation reviewer.`,
-    ``,
     `Review the ja-JP translation files added in PR #${PR_NUM} (branch: ${BRANCH}).`,
     `Focus only on files under docs/ja-JP/.`,
     ``,
-    `Check for the following issues and post inline review comments:`,
-    ``,
-    `1. **Untranslated sections** — any English text that should have been translated`,
-    `2. **Over-translated code** — source code inside fences that was incorrectly translated`,
-    `3. **YAML frontmatter violations** — field names (name:, origin:, tools:) must stay in English`,
-    `4. **Terminology inconsistency** — use katakana for tech terms:`,
-    `   エージェント, スキル, フック, コマンド, ルール, パイプライン, コンテナ, クラスター`,
-    `5. **Structural changes** — heading levels, table columns, or list items added/removed`,
-    ``,
-    `For each issue found, post a review comment on the specific file and line.`,
-    `If no issues are found, post a single approving summary comment.`,
-    `Do NOT approve or request changes at the PR level — only post comments.`,
+    REVIEW_PROMPT_BODY,
   ].join('\n');
 
   console.log(`🤖 Submitting Jules review session for PR #${PR_NUM} (branch: ${BRANCH})...`);

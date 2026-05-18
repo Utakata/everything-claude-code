@@ -18,6 +18,7 @@
 const fs    = require('fs');
 const path  = require('path');
 const https = require('https');
+const { TRANSLATION_SYSTEM_PROMPT } = require('./lib/translation-rules');
 
 // ---------------------------------------------------------------------------
 // Config
@@ -51,47 +52,7 @@ const MAX_FILES = maxArg !== -1 ? parseInt(args[maxArg + 1], 10) : 20;
 const outArg    = args.indexOf('--output-list');
 const OUT_LIST  = outArg !== -1 ? args[outArg + 1] : null;
 
-// ---------------------------------------------------------------------------
-// Translation prompt
-// ---------------------------------------------------------------------------
-
-const SYSTEM_PROMPT = `You are a Japanese technical translator specializing in developer documentation.
-
-Translation rules:
-1. YAML frontmatter field names (name:, description:, origin:, tools:, model:) stay in English
-2. Translate the VALUE of description: to Japanese
-3. Do NOT translate code blocks — only translate comments (// or # lines) inside them
-4. Preserve all Markdown structure exactly (heading levels, lists, tables, code fences)
-5. Use katakana for technical terms per the glossary below
-6. Do NOT add, remove, or reorder any sections
-
-Glossary:
-| English | Japanese |
-|---------|----------|
-| Agent | エージェント |
-| Skill | スキル |
-| Hook | フック |
-| Command | コマンド |
-| Rule | ルール |
-| Harness | ハーネス |
-| Worktree | ワークツリー |
-| Plugin | プラグイン |
-| Pipeline | パイプライン |
-| Context window | コンテキストウィンドウ |
-| Token | トークン |
-| Build | ビルド |
-| Deploy | デプロイ |
-| Pull request | プルリクエスト |
-| Commit | コミット |
-| Anti-pattern | アンチパターン |
-| Best practice | ベストプラクティス |
-| Scaffold | スキャフォールド |
-| Container | コンテナ |
-| Cluster | クラスター |
-| Endpoint | エンドポイント |
-| Middleware | ミドルウェア |
-
-Output ONLY the translated markdown. No explanation, no preamble.`;
+// Translation prompt is loaded from scripts/lib/translation-rules.js
 
 // ---------------------------------------------------------------------------
 // File discovery
@@ -138,7 +99,7 @@ function geminiTranslate(content) {
     if (!apiKey) { reject(new Error('GEMINI_API_KEY is not set')); return; }
 
     const bodyBuf = Buffer.from(JSON.stringify({
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      system_instruction: { parts: [{ text: TRANSLATION_SYSTEM_PROMPT }] },
       contents: [{ role: 'user', parts: [{ text: `Translate the following markdown file from English to Japanese:\n\n${content}` }] }],
       generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
     }));
