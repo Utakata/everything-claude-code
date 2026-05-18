@@ -6,6 +6,7 @@ const PLATFORM_SOURCE_PATH_OWNERS = Object.freeze({
   '.claude-plugin': 'claude',
   '.codex': 'codex',
   '.cursor': 'cursor',
+  '.excel-plugin': 'excel',
   '.gemini': 'gemini',
   '.joycode': 'joycode',
   '.opencode': 'opencode',

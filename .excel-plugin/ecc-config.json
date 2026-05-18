@@ -1,0 +1,8 @@
+{
+  "model": "claude-opus-4-7",
+  "maxTokens": 4096,
+  "proxyUrl": "",
+  "defaultSkills": ["tdd-workflow", "frontend-patterns"],
+  "reactCdnVersion": "18",
+  "hookMode": "office-events"
+}

@@ -4,7 +4,7 @@ const path = require('path');
 const { getInstallTargetAdapter, planInstallTargetScaffold } = require('./install-targets/registry');
 
 const DEFAULT_REPO_ROOT = path.join(__dirname, '../..');
-const SUPPORTED_INSTALL_TARGETS = ['claude', 'cursor', 'antigravity', 'codex', 'gemini', 'opencode', 'codebuddy', 'joycode', 'qwen', 'zed'];
+const SUPPORTED_INSTALL_TARGETS = ['claude', 'cursor', 'antigravity', 'codex', 'excel', 'gemini', 'opencode', 'codebuddy', 'joycode', 'qwen', 'zed'];
 const COMPONENT_FAMILY_PREFIXES = {
   baseline: 'baseline:',
   language: 'lang:',
@@ -55,6 +55,13 @@ const LEGACY_COMPAT_BASE_MODULE_IDS_BY_TARGET = Object.freeze({
     'rules-core',
     'agents-core',
     'commands-core',
+  ],
+  excel: [
+    'rules-core',
+    'agents-core',
+    'commands-core',
+    'platform-configs',
+    'workflow-quality',
   ],
   zed: [
     'rules-core',

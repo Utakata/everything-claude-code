@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ECC Artifact Viewer</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, "Segoe UI", sans-serif; background: #f8f9fa; color: #1a1a2e; height: 100vh; display: flex; flex-direction: column; }
+
+    #toolbar {
+      background: #6366f1;
+      color: white;
+      padding: 8px 12px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #toolbar h1 { font-size: 14px; font-weight: 600; flex: 1; }
+    select, button {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.15);
+      color: white;
+      cursor: pointer;
+    }
+    button:hover { background: rgba(255,255,255,0.25); }
+    button.primary { background: white; color: #6366f1; font-weight: 600; }
+
+    #hook-bar {
+      background: #1e1e2e;
+      color: #a6adc8;
+      font-size: 11px;
+      padding: 4px 12px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .hook-indicator { display: flex; align-items: center; gap: 4px; }
+    .hook-dot { width: 6px; height: 6px; border-radius: 50%; background: #45475a; }
+    .hook-dot.active { background: #a6e3a1; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    #preview-frame {
+      flex: 1;
+      border: none;
+      background: white;
+    }
+
+    #status-bar {
+      background: #1e1e2e;
+      color: #6c7086;
+      font-size: 11px;
+      padding: 3px 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <h1>⚡ ECC Artifact Viewer</h1>
+    <select id="skill-selector">
+      <option value="">-- Skill --</option>
+    </select>
+    <button id="render-btn" class="primary">▶ Render</button>
+    <button id="read-btn">📋 Read Sheet</button>
+    <button id="export-btn">📄 Export HTML</button>
+  </div>
+
+  <div id="hook-bar">
+    <span>Hooks:</span>
+    <span class="hook-indicator">
+      <span class="hook-dot" id="hook-change"></span> onChanged
+    </span>
+    <span class="hook-indicator">
+      <span class="hook-dot" id="hook-select"></span> onSelect
+    </span>
+    <span class="hook-indicator">
+      <span class="hook-dot" id="hook-activate"></span> onActivate
+    </span>
+    <span style="margin-left:auto" id="hook-last"></span>
+  </div>
+
+  <iframe
+    id="preview-frame"
+    sandbox="allow-scripts allow-same-origin allow-forms"
+    title="ECC Artifact Preview"
+  ></iframe>
+
+  <div id="status-bar">
+    <span id="status-text">Ready — open a sheet and click Render</span>
+    <span id="sheet-name">No sheet</span>
+  </div>
+
+  <script src="viewer.js" defer></script>
+</body>
+</html>
