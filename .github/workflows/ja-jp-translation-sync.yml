@@ -173,8 +173,8 @@ jobs:
               '- [ ] Markdown構造が崩れていないか確認',
               '',
               remaining > 0
-                ? `> ℹ️ **${remaining} ファイル**が未翻訳のまま残っています。次回の自動実行で処理されます。`
-                : '> ✅ すべてのファイルが翻訳されました。',
+                ? `> [Info] **${remaining} ファイル**が未翻訳のまま残っています。次回の自動実行で処理されます。`
+                : '> [Success] すべてのファイルが翻訳されました。',
               '',
               '---',
               '*翻訳エンジン: Gemini API (gemini-2.0-flash) | レビュー: Jules API*',
@@ -216,7 +216,7 @@ jobs:
           GITHUB_HEAD_REF: ${{ needs.translate-and-pr.outputs.branch }}
         run: |
           if [ -z "$JULES_API_KEY" ]; then
-            echo "ℹ️  JULES_API_KEY not configured — skipping Jules review."
+            echo "[Info]  JULES_API_KEY not configured — skipping Jules review."
             exit 0
           fi
           node scripts/jules-review-request.js \
@@ -230,4 +230,4 @@ jobs:
     if: needs.sync-and-detect.outputs.has_missing == 'false'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "✅ ja-JP translations are fully up to date with upstream."
+      - run: echo "[Success] ja-JP translations are fully up to date with upstream."
