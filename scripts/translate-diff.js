@@ -145,18 +145,18 @@ function geminiTranslate(content) {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log('🔍 Scanning for missing ja-JP translations...');
+  console.log('SEARCH: Scanning for missing ja-JP translations...');
   const missing = collectMissingFiles();
 
   if (missing.length === 0) {
-    console.log('✅ All files are translated. Nothing to do.');
+    console.log('PASS: All files are translated. Nothing to do.');
     if (OUT_LIST) fs.writeFileSync(OUT_LIST, '');
     return;
   }
 
-  console.log(`📋 Found ${missing.length} untranslated file(s).`);
+  console.log(`COPY: Found ${missing.length} untranslated file(s).`);
   const toProcess = missing.slice(0, MAX_FILES);
-  console.log(`⚙️  Processing ${toProcess.length} file(s) (max: ${MAX_FILES}).\n`);
+  console.log(`CONFIG:  Processing ${toProcess.length} file(s) (max: ${MAX_FILES}).\n`);
 
   if (OUT_LIST) {
     fs.writeFileSync(OUT_LIST, toProcess.map(f => f.dstFile).join('\n'));
@@ -181,19 +181,19 @@ async function main() {
       const translated = await geminiTranslate(fs.readFileSync(srcFile, 'utf8'));
       fs.mkdirSync(path.dirname(dstFile), { recursive: true });
       fs.writeFileSync(dstFile, translated, 'utf8');
-      console.log('✅');
+      console.log('PASS:');
       ok++;
     } catch (err) {
-      console.log(`❌ ${err.message}`);
+      console.log(`FAIL: ${err.message}`);
       ng++;
     }
     // 500ms pause to respect free-tier rate limits
     if (i < toProcess.length - 1) await new Promise(r => setTimeout(r, 500));
   }
 
-  console.log(`\n📊 Done: ${ok} ok, ${ng} failed, ${missing.length - toProcess.length} deferred.`);
+  console.log(`\nSTATS: Done: ${ok} ok, ${ng} failed, ${missing.length - toProcess.length} deferred.`);
   if (missing.length > MAX_FILES) {
-    console.log(`ℹ️  ${missing.length - MAX_FILES} file(s) remain — next run will pick them up.`);
+    console.log(`INFO:  ${missing.length - MAX_FILES} file(s) remain — next run will pick them up.`);
   }
   if (ng > 0) process.exit(1);
 }
