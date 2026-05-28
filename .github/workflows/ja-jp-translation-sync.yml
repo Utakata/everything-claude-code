@@ -45,6 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -85,6 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           fetch-depth: 0
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -171,8 +173,8 @@ jobs:
               '- [ ] Markdown構造が崩れていないか確認',
               '',
               remaining > 0
-                ? `> ℹ️ **${remaining} ファイル**が未翻訳のまま残っています。次回の自動実行で処理されます。`
-                : '> ✅ すべてのファイルが翻訳されました。',
+                ? `> [INFO] **${remaining} ファイル**が未翻訳のまま残っています。次回の自動実行で処理されます。`
+                : '> [SUCCESS] すべてのファイルが翻訳されました。',
               '',
               '---',
               '*翻訳エンジン: Gemini API (gemini-2.0-flash) | レビュー: Jules API*',
@@ -199,6 +201,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           sparse-checkout: scripts/
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
@@ -213,7 +216,7 @@ jobs:
           GITHUB_HEAD_REF: ${{ needs.translate-and-pr.outputs.branch }}
         run: |
           if [ -z "$JULES_API_KEY" ]; then
-            echo "ℹ️  JULES_API_KEY not configured — skipping Jules review."
+            echo "[INFO]  JULES_API_KEY not configured — skipping Jules review."
             exit 0
           fi
           node scripts/jules-review-request.js \
@@ -227,4 +230,4 @@ jobs:
     if: needs.sync-and-detect.outputs.has_missing == 'false'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "✅ ja-JP translations are fully up to date with upstream."
+      - run: echo "[SUCCESS] ja-JP translations are fully up to date with upstream."
