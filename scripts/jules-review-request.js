@@ -78,7 +78,7 @@ async function main() {
     REVIEW_PROMPT_BODY,
   ].join('\n');
 
-  console.log(`🤖 Submitting Jules review session for PR #${PR_NUM} (branch: ${BRANCH})...`);
+  console.log(`[BOT] Submitting Jules review session for PR #${PR_NUM} (branch: ${BRANCH})...`);
 
   const res = await julesPost('/sessions', {
     title: `Translation review: PR #${PR_NUM}`,
@@ -88,7 +88,7 @@ async function main() {
   });
 
   if (res.status === 429) {
-    console.log('⚠️  Jules is busy (429). Review will be skipped this time.');
+    console.log('[WARNING]  Jules is busy (429). Review will be skipped this time.');
     process.exit(0); // Non-fatal — PR can still be merged without Jules review
   }
   if (res.status >= 400) {
@@ -97,7 +97,7 @@ async function main() {
   }
 
   const session = JSON.parse(res.body);
-  console.log(`✅ Jules review session created: ${session.name}`);
+  console.log(`[SUCCESS] Jules review session created: ${session.name}`);
   console.log(`   Jules will review the translation and post inline comments.`);
   console.log(`   Monitor at: https://jules.google.com`);
 }
