@@ -46,9 +46,12 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sync upstream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git remote add upstream https://github.com/affaan-m/everything-claude-code.git || true
           git fetch upstream main --quiet
@@ -56,6 +59,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git merge upstream/main --no-edit --strategy-option=ours \
             -m "chore: sync upstream/main [skip ci]" || true
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push origin main
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
@@ -87,6 +91,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
+          persist-credentials: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
@@ -130,10 +135,13 @@ jobs:
 
       - name: Commit & push
         if: steps.changes.outputs.count != '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git add docs/ja-JP/
           NFILES=$(git diff --cached --name-only | wc -l | tr -d ' ')
           git commit -m "feat(ja-JP): auto-translate ${NFILES} file(s) via Gemini [skip ci]"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push origin "${{ steps.branch.outputs.name }}"
 
       - name: Open PR
@@ -171,8 +179,8 @@ jobs:
               '- [ ] Markdown構造が崩れていないか確認',
               '',
               remaining > 0
-                ? `> ℹ️ **${remaining} ファイル**が未翻訳のまま残っています。次回の自動実行で処理されます。`
-                : '> ✅ すべてのファイルが翻訳されました。',
+                ? `> **${remaining} ファイル**が未翻訳のまま残っています。次回の自動実行で処理されます。`
+                : '> すべてのファイルが翻訳されました。',
               '',
               '---',
               '*翻訳エンジン: Gemini API (gemini-2.0-flash) | レビュー: Jules API*',
@@ -200,6 +208,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           sparse-checkout: scripts/
+          persist-credentials: false
 
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
@@ -213,7 +222,7 @@ jobs:
           GITHUB_HEAD_REF: ${{ needs.translate-and-pr.outputs.branch }}
         run: |
           if [ -z "$JULES_API_KEY" ]; then
-            echo "ℹ️  JULES_API_KEY not configured — skipping Jules review."
+            echo "INFO: JULES_API_KEY not configured — skipping Jules review."
             exit 0
           fi
           node scripts/jules-review-request.js \
@@ -227,4 +236,4 @@ jobs:
     if: needs.sync-and-detect.outputs.has_missing == 'false'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "✅ ja-JP translations are fully up to date with upstream."
+      - run: echo "All ja-JP translations are up to date with upstream."
