@@ -1,122 +1,122 @@
-# リポジトリ評価 vs 現在のセットアップ
+# リポジトリの評価と現在のセットアップの比較
 
-**日付：** 2026年3月21日
-**ブランチ：** `claude/evaluate-repo-comparison-ASZ9Y`
-
----
-
-## 現在のセットアップ（`~/.claude/`）
-
-アクティブなClaude Codeインストールはほぼ最小構成：
-
-| コンポーネント | 現在 |
-|---------------|------|
-| エージェント | 0 |
-| スキル | 0（インストール済み） |
-| コマンド | 0 |
-| フック | 1（Stop: gitチェック） |
-| ルール | 0 |
-| MCP設定 | 0 |
-
-**インストール済みフック：**
-- `Stop` → `stop-hook-git-check.sh` — コミットされていない変更やプッシュされていないコミットがある場合にセッション終了をブロック
-
-**インストール済みパーミッション：**
-- `Skill` — スキルの呼び出しを許可
-
-**プラグイン：** `blocklist.json`のみ（アクティブなプラグインなし）
+**日付:** 2026-03-21
+**ブランチ:** `claude/evaluate-repo-comparison-ASZ9Y`
 
 ---
 
-## このリポジトリ（`everything-claude-code` v1.9.0）
+## 現在のセットアップ (`~/.claude/`)
+
+アクティブな Claude Code のインストールはほぼ最小限です：
+
+| コンポーネント | 現在の状況 |
+|-----------|---------|
+| Agents | 0 |
+| Skills | 0 インストール済み |
+| Commands | 0 |
+| Hooks | 1 (Stop: git check) |
+| Rules | 0 |
+| MCP configs | 0 |
+
+**インストール済みのhooks:**
+- `Stop` → `stop-hook-git-check.sh` — コミットされていない変更やプッシュされていないコミットがある場合、セッションの終了をブロックします
+
+**インストール済みのpermissions:**
+- `Skill` — skillの呼び出しを許可します
+
+**Plugins:** `blocklist.json` のみ (アクティブなプラグインはインストールされていません)
+
+---
+
+## このリポジトリ (`everything-claude-code` v1.9.0)
 
 | コンポーネント | リポジトリ |
-|---------------|-----------|
-| エージェント | 28 |
-| スキル | 116 |
-| コマンド | 59 |
-| ルールセット | 12言語 + 共通（60以上のルールファイル） |
-| フック | 包括的システム（PreToolUse、PostToolUse、SessionStart、Stop） |
-| MCP設定 | 1（Context7 + その他） |
-| スキーマ | 9つのJSONバリデーター |
-| スクリプト/CLI | 46以上のNode.jsモジュール + 複数のCLI |
-| テスト | 58のテストファイル |
-| インストールプロファイル | core、developer、security、research、full |
-| 対応ハーネス | Claude Code、Codex、Cursor、OpenCode |
+|-----------|------|
+| Agents | 28 |
+| Skills | 116 |
+| Commands | 59 |
+| Rules sets | 12言語 + 共通 (60以上のruleファイル) |
+| Hooks | 包括的なシステム (PreToolUse, PostToolUse, SessionStart, Stop) |
+| MCP configs | 1 (Context7 + その他) |
+| Schemas | 9つのJSONバリデーター |
+| Scripts/CLI | 46以上のNode.jsモジュール + 複数のCLI |
+| Tests | 58のtestファイル |
+| Install profiles | core, developer, security, research, full |
+| Supported harnesses | Claude Code, Codex, Cursor, OpenCode |
 
 ---
 
 ## ギャップ分析
 
-### フック
-- **現在：** 1つのStopフック（git衛生チェック）
-- **リポジトリ：** 以下をカバーする完全なフックマトリクス：
-  - 危険なコマンドのブロック（`rm -rf`、強制プッシュ）
+### Hooks
+- **現在:** 1つのStop hook (git衛生チェック)
+- **リポジトリ:** 以下をカバーする完全なhookマトリックス：
+  - 危険なコマンドのブロック (`rm -rf`、フォースプッシュ)
   - ファイル編集時の自動フォーマット
   - 開発サーバーのtmux強制
-  - コスト追跡
+  - コストトラッキング
   - セッション評価とガバナンスキャプチャ
   - MCPヘルスモニタリング
 
-### エージェント（28個不足）
-リポジトリは主要なワークフローごとに専門エージェントを提供：
-- 言語レビュアー：TypeScript、Python、Go、Java、Kotlin、Rust、C++、Flutter
-- ビルドリゾルバー：Go、Java、Kotlin、Rust、C++、PyTorch
-- ワークフローエージェント：planner、tdd-guide、code-reviewer、security-reviewer、architect
-- 自動化：loop-operator、doc-updater、refactor-cleaner、harness-optimizer
+### Agents (28不足)
+リポジトリは、すべての主要なワークフローに対して特化したエージェントを提供します：
+- Language reviewers: TypeScript, Python, Go, Java, Kotlin, Rust, C++, Flutter
+- Build resolvers: Go, Java, Kotlin, Rust, C++, PyTorch
+- Workflow agents: planner, tdd-guide, code-reviewer, security-reviewer, architect
+- Automation: loop-operator, doc-updater, refactor-cleaner, harness-optimizer
 
-### スキル（116個不足）
+### Skills (116不足)
 以下をカバーするドメイン知識モジュール：
-- 言語パターン（Python、Go、Kotlin、Rust、C++、Java、Swift、Perl、Laravel、Django）
-- テスト戦略（TDD、E2E、カバレッジ）
-- アーキテクチャパターン（バックエンド、フロントエンド、API設計、データベースマイグレーション）
-- AI/MLワークフロー（Claude API、評価ハーネス、エージェントループ、コスト意識パイプライン）
-- ビジネスワークフロー（投資家向け資料、市場調査、コンテンツエンジン）
+- Language patterns (Python, Go, Kotlin, Rust, C++, Java, Swift, Perl, Laravel, Django)
+- Testing strategies (TDD, E2E, coverage)
+- Architecture patterns (backend, frontend, API design, database migrations)
+- AI/ML workflows (Claude API, eval harness, agent loops, cost-aware pipelines)
+- Business workflows (investor materials, market research, content engine)
 
-### コマンド（59個不足）
-- `/tdd`、`/plan`、`/e2e`、`/code-review` — コア開発ワークフロー
-- `/sessions`、`/save-session`、`/resume-session` — セッション永続化
-- `/orchestrate`、`/multi-plan`、`/multi-execute` — マルチエージェント協調
-- `/learn`、`/skill-create`、`/evolve` — 継続的改善
-- `/build-fix`、`/verify`、`/quality-gate` — ビルド/品質自動化
+### Commands (59不足)
+- `/tdd`, `/plan`, `/e2e`, `/code-review` — コアな開発ワークフロー
+- `/sessions`, `/save-session`, `/resume-session` — セッションの永続化
+- `/orchestrate`, `/multi-plan`, `/multi-execute` — マルチエージェントの調整
+- `/learn`, `/skill-create`, `/evolve` — 継続的改善
+- `/build-fix`, `/verify`, `/quality-gate` — ビルド/品質の自動化
 
-### ルール（60以上のファイルが不足）
-以下の言語固有のコーディングスタイル、パターン、テスト、セキュリティガイドライン：
-TypeScript、Python、Go、Java、Kotlin、Rust、C++、C#、Swift、Perl、PHP、および共通/クロス言語ルール。
+### Rules (60以上のファイルが不足)
+以下の言語向けの言語固有のコーディングスタイル、パターン、テスト、およびセキュリティガイドライン：
+TypeScript, Python, Go, Java, Kotlin, Rust, C++, C#, Swift, Perl, PHP、および共通/言語横断的なルール。
 
 ---
 
 ## 推奨事項
 
-### 即座に価値を得られるもの（coreインストール）
-`ecc install --profile core` を実行して以下を取得：
-- コアエージェント（code-reviewer、planner、tdd-guide、security-reviewer）
-- 必須スキル（tdd-workflow、coding-standards、security-review）
-- 主要コマンド（/tdd、/plan、/code-review、/build-fix）
+### 即時価値 (core install)
+`ecc install --profile core` を実行して以下を取得します：
+- Core agents (code-reviewer, planner, tdd-guide, security-reviewer)
+- Essential skills (tdd-workflow, coding-standards, security-review)
+- Key commands (/tdd, /plan, /code-review, /build-fix)
 
-### フルインストール
-`ecc install --profile full` を実行して全28エージェント、116スキル、59コマンドを取得。
+### Full install
+`ecc install --profile full` を実行して、全28のエージェント、116のスキル、59のコマンドを取得します。
 
-### フックのアップグレード
-現在のStopフックは堅実です。リポジトリの`hooks.json`は以下を追加：
-- 危険なコマンドのブロック（安全性）
-- 自動フォーマット（品質）
-- コスト追跡（可観測性）
-- セッション評価（学習）
+### Hooks のアップグレード
+現在のStop hookは堅牢です。リポジトリの `hooks.json` は以下を追加します：
+- 危険なコマンドのブロック (安全性)
+- 自動フォーマット (品質)
+- コストトラッキング (可観測性)
+- セッション評価 (学習)
 
-### ルール
-言語ルール（例：TypeScript、Python）を追加することで、セッションごとのプロンプトに依存せず、常時有効なコーディングガイドラインを提供。
+### Rules
+言語ルール（例：TypeScript、Python）を追加することで、セッションごとのプロンプトに依存することなく、常にオンになっているコーディングガイドラインを提供します。
 
 ---
 
-## 現在のセットアップの優れている点
+## 現在のセットアップで優れている点
 
-- `stop-hook-git-check.sh` Stopフックはプロダクション品質で、良好なgit衛生を既に強制している
-- `Skill` パーミッションが正しく設定されている
-- セットアップがクリーンで、競合やゴミがない
+- `stop-hook-git-check.sh` のStop hookは実稼働品質であり、すでに良好なgit衛生を強制しています
+- `Skill` 権限は正しく設定されています
+- セットアップはクリーンであり、コンフリクトや不要なものは存在しません
 
 ---
 
 ## まとめ
 
-現在のセットアップは、1つの優れた実装のgit衛生フックを持つ基本的にブランクスレートです。このリポジトリは、エージェント、スキル、コマンド、フック、ルールをカバーする完全でプロダクションテスト済みの拡張レイヤーを提供し、設定を肥大化させずに必要なものだけを追加できる選択的インストールシステムを備えています。
+現在のセットアップは、本質的に白紙の状態であり、1つのよく実装されたgit衛生フックがあるだけです。このリポジトリは、エージェント、スキル、コマンド、フック、ルールをカバーする、完全で実稼働テスト済みの拡張レイヤーを提供します。また、選択的なインストールシステムを備えているため、構成を肥大化させることなく、必要なものだけを正確に追加できます。
