@@ -31,8 +31,9 @@ write('rules/zh/testing.md');          // excluded locale source
 write('skills/foo/SKILL.md');
 write('skills/foo/references/bar.md');  // reference sub-file (now in scope)
 write('docs/architecture/y.md');
-write('docs/zh-CN/x.md');              // excluded other-language locale
-write('docs/releases/1.0.0/notes.md'); // excluded ephemeral artifact
+write('docs/zh-CN/x.md');                     // excluded other-language locale
+write('docs/releases/1.0.0/notes.md');        // excluded ephemeral artifact
+write('docs/releases/2.0.0-rc.1/notes.md');   // in scope (carved out of releases/ exclusion)
 write('README.md');
 write('node_modules/pkg/readme.md');   // must not be reached from root mapping
 
@@ -100,9 +101,14 @@ test('flags root README.md', () => {
 test('excludes rules/zh locale source', () => {
   assert.ok(!srcRel.includes('rules/zh/testing.md'), srcRel.join(', '));
 });
-test('excludes docs other-language locales and ephemeral artifacts', () => {
+test('excludes docs other-language locales and non-2.0.0-rc.1 releases', () => {
   assert.ok(!srcRel.some(r => r.startsWith('docs/zh-CN/')), srcRel.join(', '));
-  assert.ok(!srcRel.some(r => r.startsWith('docs/releases/')), srcRel.join(', '));
+  assert.ok(!srcRel.some(r => r.startsWith('docs/releases/1.0.0/')), srcRel.join(', '));
+});
+test('includes docs/releases/2.0.0-rc.1 (carved out of releases exclusion)', () => {
+  const i = srcRel.indexOf('docs/releases/2.0.0-rc.1/notes.md');
+  assert.notStrictEqual(i, -1, `sources: ${srcRel.join(', ')}`);
+  assert.strictEqual(dstRel[i], 'docs/ja-JP/releases/2.0.0-rc.1/notes.md');
 });
 test('root mapping does not descend into node_modules', () => {
   assert.ok(!srcRel.some(r => r.includes('node_modules')), srcRel.join(', '));

@@ -44,8 +44,9 @@ const SOURCE_MAPPINGS = [
     // docs/ English source. docs/ja-JP/ maps 1:1 under LOCALE_DIR.
     // Exclude other-language locale mirrors and dated/ephemeral artifacts
     // (release marketing copy, PR/plan logs, hook-fix logs, dated dashboards).
+    // releases/ is excluded EXCEPT the 2.0.0-rc.1 set, which is translated in full.
     src: 'docs', dst: LOCALE_DIR,
-    exclude: /^(zh-CN|zh-TW|ko-KR|tr|pt-BR|vi-VN|th|ru|ja-JP)\/|^releases\/|^fixes\/|^business\/|^PR-|^MEGA-PLAN|^PHASE1-|stale-pr-salvage|legacy-artifact-inventory|-\d{8}(-[a-z0-9-]+)?\.md$/,
+    exclude: /^(zh-CN|zh-TW|ko-KR|tr|pt-BR|vi-VN|th|ru|ja-JP)\/|^releases\/(?!2\.0\.0-rc\.1\/)|^fixes\/|^business\/|^PR-|^MEGA-PLAN|^PHASE1-|stale-pr-salvage|legacy-artifact-inventory|-\d{8}(-[a-z0-9-]+)?\.md$/,
   },
   {
     src: '.', dst: LOCALE_DIR, recursive: false,
