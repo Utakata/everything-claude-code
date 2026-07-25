@@ -29,15 +29,28 @@ const LOCALE_DIR = path.join(REPO_ROOT, 'docs', 'ja-JP');
 const GEMINI_HOST  = 'generativelanguage.googleapis.com';
 const GEMINI_MODEL = 'gemini-2.0-flash';
 
-// Source directories → docs/ja-JP/ mappings
+// Source directories → docs/ja-JP/ mappings.
+//   recursive: false  → only top-level *.md (used for repo root to avoid
+//                       descending into node_modules/, docs/, etc.)
+//   exclude           → regex on the source-relative path; matches are skipped
+//   include           → regex on the source-relative path; only matches are kept
 const SOURCE_MAPPINGS = [
-  { src: 'agents',   dst: path.join(LOCALE_DIR, 'agents'),  glob: '*.md' },
-  { src: 'commands', dst: path.join(LOCALE_DIR, 'commands'), glob: '*.md' },
-  { src: 'rules',    dst: path.join(LOCALE_DIR, 'rules'),    glob: '**/*.md', exclude: /^zh\// },
-  { src: 'skills',   dst: path.join(LOCALE_DIR, 'skills'),   glob: '**/SKILL.md' },
+  { src: 'agents',   dst: path.join(LOCALE_DIR, 'agents') },
+  { src: 'commands', dst: path.join(LOCALE_DIR, 'commands') },
+  { src: 'rules',    dst: path.join(LOCALE_DIR, 'rules'),    exclude: /^zh\// },
+  { src: 'skills',   dst: path.join(LOCALE_DIR, 'skills') },
+  { src: 'examples', dst: path.join(LOCALE_DIR, 'examples') },
   {
-    src: '.', dst: LOCALE_DIR, glob: '*.md',
-    include: /^(AGENTS|RULES|CLAUDE|SOUL|CODE_OF_CONDUCT|SPONSORING|SPONSORS|TROUBLESHOOTING|SECURITY|CHANGELOG|COMMANDS-QUICK-REF|EVALUATION|the-longform-guide|the-shortform-guide|the-security-guide|the-openclaw-guide)\.md$/,
+    // docs/ English source. docs/ja-JP/ maps 1:1 under LOCALE_DIR.
+    // Exclude other-language locale mirrors and dated/ephemeral artifacts
+    // (release marketing copy, PR/plan logs, hook-fix logs, dated dashboards).
+    // releases/ is excluded EXCEPT the 2.0.0-rc.1 set, which is translated in full.
+    src: 'docs', dst: LOCALE_DIR,
+    exclude: /^(zh-CN|zh-TW|ko-KR|tr|pt-BR|vi-VN|th|ru|ja-JP)\/|^releases\/(?!2\.0\.0-rc\.1\/)|^fixes\/|^business\/|^PR-|^MEGA-PLAN|^PHASE1-|stale-pr-salvage|legacy-artifact-inventory|-\d{8}(-[a-z0-9-]+)?\.md$/,
+  },
+  {
+    src: '.', dst: LOCALE_DIR, recursive: false,
+    include: /^(README|CONTRIBUTING|GLOSSARY|AGENTS|RULES|CLAUDE|SOUL|CODE_OF_CONDUCT|SPONSORING|SPONSORS|TROUBLESHOOTING|SECURITY|CHANGELOG|COMMANDS-QUICK-REF|EVALUATION|the-longform-guide|the-shortform-guide|the-security-guide|the-openclaw-guide)\.md$/,
   },
 ];
 
@@ -58,15 +71,19 @@ const OUT_LIST  = outArg !== -1 ? args[outArg + 1] : null;
 // File discovery
 // ---------------------------------------------------------------------------
 
-function walkDir(dir) {
+// Returns markdown paths relative to `base` (the top of the walk), so nested
+// files keep their subdirectory prefix (e.g. "python/testing.md"). `base` is
+// threaded through recursion — passing `dir` as the relative anchor would
+// flatten nested paths to their basename.
+function walkDir(dir, base = dir, recursive = true) {
   const results = [];
   if (!fs.existsSync(dir)) return results;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      results.push(...walkDir(full));
+      if (recursive) results.push(...walkDir(full, base, true));
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
-      results.push(path.relative(dir, full).replace(/\\/g, '/'));
+      results.push(path.relative(base, full).replace(/\\/g, '/'));
     }
   }
   return results;
@@ -76,10 +93,9 @@ function collectMissingFiles() {
   const missing = [];
   for (const mapping of SOURCE_MAPPINGS) {
     const srcDir = path.join(REPO_ROOT, mapping.src);
-    for (const rel of walkDir(srcDir)) {
+    for (const rel of walkDir(srcDir, srcDir, mapping.recursive !== false)) {
       if (mapping.exclude && mapping.exclude.test(rel)) continue;
       if (mapping.include && !mapping.include.test(rel)) continue;
-      if (mapping.glob === '**/SKILL.md' && !rel.endsWith('SKILL.md')) continue;
       const dstFile = path.join(mapping.dst, rel);
       if (!fs.existsSync(dstFile)) {
         missing.push({ srcFile: path.join(srcDir, rel), dstFile });
@@ -198,4 +214,8 @@ async function main() {
   if (ng > 0) process.exit(1);
 }
 
-main().catch(err => { console.error('Fatal:', err.message); process.exit(1); });
+if (require.main === module) {
+  main().catch(err => { console.error('Fatal:', err.message); process.exit(1); });
+}
+
+module.exports = { walkDir, collectMissingFiles, SOURCE_MAPPINGS };
